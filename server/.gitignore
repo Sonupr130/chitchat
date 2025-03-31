@@ -1,0 +1,7 @@
+# Example .gitignore file
+node_modules/       # Ignore entire directory
+.env                # Ignore environment files
+*.log               # Ignore all .log files
+.DS_Store           # Ignore macOS system files
+/dist               # Ignore build directory
+*.tmp               # Ignore temporary files

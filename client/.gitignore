@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+
+node_modules/       # Ignore entire directory
+.env                # Ignore environment files
+*.log               # Ignore all .log files
+.DS_Store           # Ignore macOS system files
+/dist               # Ignore build directory
+*.tmp               # Ignore temporary files
