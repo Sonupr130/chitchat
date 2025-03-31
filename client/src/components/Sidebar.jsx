@@ -15,12 +15,11 @@ import {
   UsersRound,
   UserRoundPlus,
 } from "lucide-react";
-import { auth } from "../config/firebase.js";
-import useUserStore from "../store/userStore.js";
+import useAuthStore from "../store/authStore.js";
 
 const Sidebar = ({ isMobile, onClose }) => {
   const [darkMode, setDarkMode] = useState(false);
-  const { user, setUser } = useUserStore(); 
+  const { user, setUser } = useAuthStore(); 
   const navigate = useNavigate();
 
   const toggleDarkMode = () => {
@@ -35,19 +34,12 @@ const Sidebar = ({ isMobile, onClose }) => {
       }
     }, [user, navigate]);
 
-  // const user = useUserStore((state) => state.user);
-  // const setUser = useUserStore((state) => state.setUser);
   console.log("Getting user Sidebar",user);
-
-  // if (!user) {
-  //   navigate("/");
-  //   return null;
-  // }
 
 
   const handleLogout = async () => {
     try {
-      await useUserStore.getState().logout();
+      await useAuthStore.getState().logout();
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);

@@ -14,7 +14,7 @@ import ProtectedRoute from '../components/ProtectedRoute.jsx';
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPage />, // Standalone, no layout
+    element: <LandingPage />, 
   },
   {
     path: 'about',
@@ -23,7 +23,6 @@ const router = createBrowserRouter([
 
   {
     path: '/',
-    // element: <MainLayout />, 
     element: (
       <ProtectedRoute>
         <MainLayout />

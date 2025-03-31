@@ -115,12 +115,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Check, Search, UserPlus, X } from "lucide-react";
+import useAuthStore from "../store/authStore.js";
 
 const Online = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuthStore();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -129,28 +131,51 @@ const Online = () => {
   const defaultImage =
     "https://i.pinimg.com/736x/e4/04/13/e40413c5fd5cf7dc4f41aa6d911ce764.jpg";
 
-  // Fetch friends from API
+
+
   useEffect(() => {
     const fetchFriends = async () => {
       try {
-        const token = localStorage.getItem("token"); // Ensure the user is authenticated
-        const response = await axios.get("http://localhost:8000/api/user/friends", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const token = localStorage.getItem("token");
+        
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
 
-        setFriends(response.data.friends);
-        setLoading(false);
+        // First ensure we have user data
+        if (!user) {
+          const verifyResponse = await axios.get(
+            "http://localhost:8000/api/auth/verify",
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (!verifyResponse.data.user) {
+            throw new Error("User verification failed");
+          }
+        }
+
+        const response = await axios.get(
+          "http://localhost:8000/api/user/friends",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success) {
+          setFriends(response.data.friends.map(friend => ({
+            ...friend,
+            photo: friend.photo || defaultImage // Ensure photo has a fallback
+          })));
+        } else {
+          throw new Error(response.data.message || "Failed to fetch friends");
+        }
       } catch (err) {
-        console.error("Error fetching friends:", err);
-        setError("Failed to fetch friends");
+        console.error("Fetch friends error:", err);
+        setError(err.response?.data?.message || err.message);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchFriends();
-  }, []);
+  }, [user]);
 
   return (
     <div

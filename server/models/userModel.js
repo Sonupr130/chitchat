@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     uid: String,
+    photo: String, // Original provider URL (Google/Facebook/etc)
+    photoCloudinary: String, // Cloudinary URL when uploaded
     name: {
       type: String,
       required: true,
@@ -39,14 +41,18 @@ const userSchema = new mongoose.Schema(
       default: "offline",
     },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    friendRequests: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    }],
-    sentRequests: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    }],
+    friendRequests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    sentRequests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
     lastSeen: {
       type: Date,
       default: Date.now,

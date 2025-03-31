@@ -2,7 +2,7 @@ import React from 'react'
 import { RouterProvider } from 'react-router-dom';
 import router from './routes/index.jsx';
 import { useState, useEffect } from 'react';
-import useAuthStore from './store/userStore.js';
+import useAuthStore from './store/authStore.js';
 
 const App = () => {
 
@@ -10,7 +10,9 @@ const App = () => {
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
   useEffect(() => {
+    // Check auth on initial load
     checkAuth();
+
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -22,4 +24,11 @@ const App = () => {
   return <RouterProvider router={router} />;
 }
 
-export default App
+export default App;
+
+
+
+
+
+
+

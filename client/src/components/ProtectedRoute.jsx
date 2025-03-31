@@ -1,20 +1,5 @@
-// import { Navigate } from "react-router-dom";
-// import { useAuth } from "../context/AuthContext.jsx";
-
-
-
-// const ProtectedRoute = ({ children }) => {
-//   const { user, loading } = useAuth();
-
-//   if (loading) return <div>Loading...</div>;
-//   return user ? children : <Navigate to="/" />;
-// };
-
-// export default ProtectedRoute;
-
-
 import { Navigate } from "react-router-dom";
-import useAuthStore from "../store/userStore.js";
+import useAuthStore from "../store/authStore.js";
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuthStore();
 
@@ -26,14 +11,17 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-
   // If not loading but no user, redirect to login
   if (!user) {
     return <Navigate to="/" replace />;
   }
-
   // If user is authenticated, render children
   return children;
 };
 
 export default ProtectedRoute;
+
+
+
+
+

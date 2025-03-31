@@ -1,50 +1,55 @@
-// import { create } from "zustand";
-
-// const useUserStore = create((set) => ({
-//   user: null,
-//   setUser: (user) => set({ user }),
-// }));
-
-// export default useUserStore;
-
-
-
-
-
-
-
-
-// src/store/authStore.js
 import { create } from "zustand";
 import axios from "axios";
 import { auth } from "../config/firebase.js";
 
+
 const useAuthStore = create((set) => ({
-  user: null,
+  user: JSON.parse(localStorage.getItem('user')) || null,
   loading: true,
-  setUser: (user) => set({ user }),
+  
+  setUser: (user) => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+    set({ user });
+  },
+  
   setLoading: (loading) => set({ loading }),
   
-  // Add methods for authentication
   checkAuth: async () => {
     try {
+      set({ loading: true });
       const token = localStorage.getItem("token");
+      const savedUser = JSON.parse(localStorage.getItem('user'));
+      
       if (!token) {
-        set({ loading: false });
+        set({ user: null, loading: false });
         return;
       }
       
-      // Verify token with backend
-      const response = await axios.get("http://localhost:8000/api/auth/verify", {
+      // First set the saved user to avoid flash of unauthenticated content
+      if (savedUser) {
+        set({ user: savedUser });
+      }
+
+      // Then verify with backend
+      const { data } = await axios.get("http://localhost:8000/api/auth/verify", {
         headers: { Authorization: `Bearer ${token}` }
       });
-        set({ user: response.data.user, loading: false });
+      
+      if (data.success) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        set({ user: data.user, loading: false });
+      } else {
+        throw new Error("Verification failed");
+      }
     } catch (error) {
+      console.error("Auth verification failed:", error);
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       set({ user: null, loading: false });
-    } finally {
-      set({ loading: false });
     }
   },
   
@@ -57,11 +62,9 @@ const useAuthStore = create((set) => ({
   logout: async () => {
     try {
       await auth.signOut();
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      set({ user: null });
     } catch (error) {
       console.error("Firebase signout failed:", error);
+    } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       set({ user: null });

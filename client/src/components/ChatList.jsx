@@ -1,7 +1,7 @@
 import { MoreVertical } from "lucide-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import useUserStore from "../store/userStore.js";
+import useAuthStore from "../store/authStore.js";
 
 const ChatList = ({ isMobile, onSelectChat }) => {
   const chats = [
@@ -48,7 +48,7 @@ const ChatList = ({ isMobile, onSelectChat }) => {
   const defaultImage =
     "https://photosrush.com/wp-content/uploads/no-love-dp-girl-attitude-for-instagram.jpg";
 
-  const user = useUserStore((state) => state.user);
+  const user = useAuthStore((state) => state.user);
   console.log(user);
   const navigate = useNavigate();
 
@@ -56,6 +56,9 @@ const ChatList = ({ isMobile, onSelectChat }) => {
     navigate("/");
     return null;
   }
+
+  const userPhoto = user.photoCloudinary || user.photo || defaultImage;
+  const firstName = user.name ? user.name.split(' ')[0] : 'User';
 
   return (
     <div
@@ -68,18 +71,16 @@ const ChatList = ({ isMobile, onSelectChat }) => {
           {/* Avatar */}
           <div className="relative h-10 w-10 rounded-full overflow-hidden">
             <img
-              src="https://i.pinimg.com/736x/aa/32/bc/aa32bc0587d6205c33c224ddd6842b5d.jpg"
-              alt="Profile picture"
+              src={userPhoto}
+              alt="logo"
               className="h-full w-full object-cover"
             />
           </div>
 
           {/* User info */}
           <div className="flex flex-col">
-            <span className="font-medium text-gray-900">Hey!! {user.name}</span>
-            {/* <span className="font-medium text-gray-900">Hey!! Rashmita</span> */}
+            <span className="font-medium text-gray-900">Hey!! {firstName}</span>
             <div className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
               <span className="text-xs text-green-600">Available</span>
             </div>
           </div>

@@ -405,7 +405,7 @@
 import React, { useState, useEffect } from "react";
 import { Check, Search, UserPlus, X } from "lucide-react";
 import axios from "axios";
-import useUserStore from "../store/userStore.js";
+import useAuthStore from "../store/authStore.js";
 
 const AddFriend = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -413,121 +413,109 @@ const AddFriend = () => {
   const [suggestedFriends, setSuggestedFriends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { user, setUser } = useUserStore();
+  const { user, setUser } = useAuthStore();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
-  const defaultImage =
-    "https://photosrush.com/wp-content/uploads/no-love-dp-girl-attitude-for-instagram.jpg";
+  const defaultImage ="https://photosrush.com/wp-content/uploads/no-love-dp-girl-attitude-for-instagram.jpg";
 
-  // Fetch friend requests and suggested friends
+  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log(token);
-
-        if (token && !user) {
-          const userData = JSON.parse(localStorage.getItem("user"));
-          setUser(userData);
-        }
-
+        
         if (!token) {
           throw new Error("No authentication token found");
         }
-
+  
+        // First ensure we have user data
+        if (!user) {
+          const userData = JSON.parse(localStorage.getItem("user"));
+          if (userData) {
+            setUser(userData);
+          } else {
+            // If no user data, try to verify token
+            const verifyResponse = await axios.get(
+              "http://localhost:8000/api/auth/verify",
+              {
+                headers: { Authorization: `Bearer ${token}` }
+              }
+            );
+            setUser(verifyResponse.data.user);
+          }
+        }
+  
+        // Only proceed if we have a user ID
+        if (!user?._id) {
+          throw new Error("User ID not available");
+        }
+  
         // Fetch friend requests
         const requestsResponse = await axios.get(
           "http://localhost:8000/api/user/friend-requests",
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` }
           }
         );
-        console.log("friend request recieved", requestsResponse);
         
         const transformedRequests = requestsResponse.data.requests.map(request => ({
-          id: request._id,
+          _id: request._id, // Changed from id to _id
           name: request.name,
+          email: request.email, // Added email if needed
           image: request.photo || defaultImage,
-          mutualFriends: 0,
           status: request.status,
           lastSeen: request.lastSeen
         }));
-
+  
         setFriendRequests(transformedRequests);
-
+  
         // Fetch all users for suggestions
         const usersResponse = await axios.get(
           "http://localhost:8000/api/user/all-users",
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` }
           }
         );
-
-        const usersArray = Array.isArray(usersResponse.data)
-          ? usersResponse.data
-          : usersResponse.data.users || [];
-
-        // Filter out current user and existing friends
-        const currentUserId = user?._id;
-        const filteredUsers = usersArray.filter(u => 
-          u._id !== currentUserId && 
-          !friendRequests.some(req => req.id === u._id)
-        );
-
-        const transformedUsers = filteredUsers.map((user) => ({
-          id: user._id,
-          name: user.name,
-          image: user.photo || defaultImage,
-          mutualFriends: user.friends?.length || 0,
-          isRequestSent: user.sentRequests?.includes(currentUserId) || false
-        }));
-
-        setSuggestedFriends(transformedUsers);
+        
       } catch (err) {
-        const errorMessage = err.response
-          ? `Server responded with status ${err.response.status}`
-          : err.message;
-        setError(errorMessage);
-        console.error("Error:", err);
+        console.error("Fetch error:", err);
+        setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
-  }, [setUser, user]);
+  }, [user, setUser]); 
 
+ 
   const handleAddFriend = async (friendId) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No authentication token found");
-
-      await axios.post(
+  
+      const response = await axios.post(
         "http://localhost:8000/api/user/add-friend",
         { friendId },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Update the suggested friends list
-      setSuggestedFriends((prev) =>
-        prev.map((user) =>
-          user.id === friendId ? { ...user, isRequestSent: true } : user
-        )
-      );
+  
+      if (response.data.success) {
+        setSuggestedFriends(prev =>
+          prev.map(user =>
+            user._id === friendId ? { ...user, isRequestSent: true } : user
+          )
+        );
+      } else {
+        throw new Error(response.data.message || "Failed to add friend");
+      }
     } catch (error) {
-      console.error("Error adding friend:", error);
-      alert("Failed to add friend. Please try again.");
+      console.error("Add friend error:", error);
+      alert(error.message);
     }
   };
 

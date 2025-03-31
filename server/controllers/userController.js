@@ -1,19 +1,42 @@
 import User from "../models/userModel.js";
 import mongoose from "mongoose";
 
-export const updateProfile = async (req, res) => {
-  const { name, photo } = req.body;
-
+export const updateProfilePicture = async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      { name, photo },
+    const { userId } = req.params;
+    const file = req.file; // From multer middleware
+
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // 1. Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(file.path, {
+      folder: 'chitchat/profiles',
+      transformation: [
+        { width: 200, height: 200, crop: "fill" },
+        { quality: "auto" }
+      ]
+    });
+
+    // 2. Update user in database
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { photoCloudinary: result.secure_url },
       { new: true }
     );
 
-    res.status(200).json({ message: "Profile Updated", user: updatedUser });
-  } catch (err) {
-    res.status(500).json({ message: "Error updating profile", error: err });
+    // 3. Return new photo URL
+    res.status(200).json({
+      success: true,
+      photoUrl: result.secure_url
+    });
+
+    // 4. Cleanup - delete temp file
+    fs.unlinkSync(file.path);
+  } catch (error) {
+    console.error('Update error:', error);
+    res.status(500).json({ message: "Error updating profile picture" });
   }
 };
 
@@ -210,17 +233,15 @@ export const rejectRequest = async (req, res) => {
 
 export const getFriendRequests = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log("user form get friend request controller ", userId);
+    const userId = req.user._id; // Changed from req.user.id to req.user._id
+    console.log("User ID from request:", userId);
 
-    // Find the user and populate the friendRequests with sender details
+    // Find the user and populate the friendRequests
     const user = await User.findById(userId)
       .populate({
         path: 'friendRequests',
-        select: '_id name photo status lastSeen' // Only include necessary fields
-      })
-      .select('friendRequests'); // Only return friendRequests field
-      console.log("this is the data of friend request sent by the people to me", user);
+        select: '_id name email photo status lastSeen' // Include more fields if needed
+      });
 
     if (!user) {
       return res.status(404).json({ 
@@ -229,16 +250,19 @@ export const getFriendRequests = async (req, res) => {
       });
     }
 
+    console.log("Friend requests data:", user.friendRequests);
+    
     res.status(200).json({ 
       success: true,
-      requests: user.friendRequests 
+      requests: user.friendRequests || [] // Ensure we always return an array
     });
 
   } catch (err) {
+    console.error("Error fetching friend requests:", err);
     res.status(500).json({ 
       success: false,
       message: "Error fetching friend requests",
-     console: ("unable to fetch friend request data", err.message)
+      error: err.message 
     });
   }
 };
@@ -246,17 +270,15 @@ export const getFriendRequests = async (req, res) => {
 
 export const getFriends = async (req, res) => {
   try {
-    const userId = req.user.id;
-    console.log("user form get friends controller ", userId);
+    const userId = req.user._id; // Changed from req.user.id to req.user._id
+    console.log("User ID from request:", userId);
 
     // Find the user and populate the friends field
     const user = await User.findById(userId)
       .populate({
         path: 'friends',
-        select: '_id name photo status lastSeen' // Fetch only necessary fields
-      })
-      .select('friends'); // Only return the friends field
-      console.log("this is the data of friends of me", user);
+        select: '_id name email photo status lastSeen' // Include more fields if needed
+      });
 
     if (!user) {
       return res.status(404).json({ 
@@ -265,17 +287,19 @@ export const getFriends = async (req, res) => {
       });
     }
 
+    console.log("Friends data:", user.friends);
+    
     res.status(200).json({ 
       success: true,
-      friends: user.friends 
+      friends: user.friends || [] // Ensure we always return an array
     });
 
   } catch (err) {
-    console.error("Error fetching friends:", err.message);
+    console.error("Error fetching friends:", err);
     res.status(500).json({ 
       success: false,
       message: "Error fetching friends",
-      error: err.message
+      error: err.message 
     });
   }
 };

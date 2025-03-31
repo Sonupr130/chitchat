@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { useNavigate } from "react-router-dom";
-import useUserStore from "../store/userStore.js";
+import useUserStore from "../store/authStore.js";
 import { auth } from "../config/firebase.js";
 import Chat from "./Chat.jsx";
 

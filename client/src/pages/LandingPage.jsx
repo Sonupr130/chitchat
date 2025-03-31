@@ -10,14 +10,13 @@ import Navbar from "@/components/Navbar";
 import Testimonials from "@/components/Testimonials";
 import chitchat from "../assets/chitchat.png";
 import { useNavigate } from "react-router-dom";
-import useUserStore from "../store/userStore.js";
+import useAuthStore from "../store/authStore.js";
 import { signInWithPopup, auth, provider } from "../config/firebase.js";
 import axios from "axios";
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  // const setUser = useUserStore((state) => state.setUser);
-  const { setUser } = useUserStore(); 
+  const { setUser } = useAuthStore(); 
 
   const handleGoogleSignIn = async () => {
     try {
@@ -34,14 +33,20 @@ const LandingPage = () => {
         uid,
       });
 
-      // 3. Store tokens and user data
-      localStorage.setItem('token', data.token); 
-      localStorage.setItem('user', JSON.stringify(data.user));
-      console.log(data);
+      // // 3. Store tokens and user data
+      // localStorage.setItem('token', data.token); 
+      // localStorage.setItem('user', JSON.stringify(data.user));
+      // console.log(data);
+      // setUser(data.user);
 
+      // 3. Store tokens and user data using Zustand's login method
+    // This handles both localStorage and state management in one call
+    useAuthStore.getState().login({
+      token: data.token,
+      user: data.user
+    });
 
-        // 4. Update Zustand store
-      setUser(data.user);
+    console.log("Login successful, user data:", data.user);
       navigate("/chat");
     } catch (error) {
       console.log(error);
