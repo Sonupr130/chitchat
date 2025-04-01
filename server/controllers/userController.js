@@ -40,6 +40,7 @@ export const updateProfilePicture = async (req, res) => {
   }
 };
 
+
 // export const addFriend = async (req, res) => {
 //   const { friendId } = req.body;
 
@@ -69,21 +70,25 @@ export const updateProfilePicture = async (req, res) => {
 //       });
 //     }
 
-//     // Add friend
-//     user.sentRequests.push(friendId);
-//     await user.save();
+//     // Check if request already sent
+//     if (user.sentRequests.includes(friendId)) {
+//       return res.status(400).json({ 
+//         message: "Request already sent",
+//         sentRequests: user.sentRequests 
+//       });
+//     }
 
-//     // Optionally: Add notification system here
-//     // await Notification.create({
-//     //   recipient: friendId,
-//     //   sender: req.user.id,
-//     //   type: 'friend_request'
-//     // });
+//     // Add to sender's sentRequests and receiver's friendRequests
+//     user.sentRequests.push(friendId);
+//     friend.friendRequests.push(req.user.id);
+    
+//     // Save both users
+//     await Promise.all([user.save(), friend.save()]);
 
 //     return res.status(200).json({ 
 //       success: true,
 //       message: "Friend request sent",
-//       friends: user.friends 
+//       sentRequests: user.sentRequests 
 //     });
 
 //   } catch (err) {
@@ -97,139 +102,233 @@ export const updateProfilePicture = async (req, res) => {
 // };
 
 
-
-
-
 export const addFriend = async (req, res) => {
   const { friendId } = req.body;
 
   try {
-    // Validate friendId
-    if (!mongoose.Types.ObjectId.isValid(friendId)) {
-      return res.status(400).json({ message: "Invalid friend ID" });
-    }
+    // Convert to ObjectId if it's a valid string
+    const friendObjectId = mongoose.Types.ObjectId.createFromHexString(friendId);
+    const currentUserId = req.user._id; // Use _id consistently
 
     // Check if friend exists
-    const friend = await User.findById(friendId);
+    const friend = await User.findById(friendObjectId);
     if (!friend) {
-      return res.status(404).json({ message: "Friend not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Friend not found" 
+      });
     }
 
     // Get current user
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(currentUserId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+
+    // Check if trying to add self
+    if (friendObjectId.equals(currentUserId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot add yourself as a friend"
+      });
     }
 
     // Check if already friends
-    if (user.friends.includes(friendId)) {
+    if (user.friends.some(id => id.equals(friendObjectId))) {
       return res.status(400).json({ 
-        message: "Already friends",
-        friends: user.friends 
+        success: false,
+        message: "Already friends"
       });
     }
 
     // Check if request already sent
-    if (user.sentRequests.includes(friendId)) {
+    if (user.sentRequests.some(id => id.equals(friendObjectId))) {
       return res.status(400).json({ 
-        message: "Request already sent",
-        sentRequests: user.sentRequests 
+        success: false,
+        message: "Request already sent"
       });
     }
 
     // Add to sender's sentRequests and receiver's friendRequests
-    user.sentRequests.push(friendId);
-    friend.friendRequests.push(req.user.id);
+    user.sentRequests.push(friendObjectId);
+    friend.friendRequests.push(currentUserId);
     
-    // Save both users
     await Promise.all([user.save(), friend.save()]);
 
     return res.status(200).json({ 
       success: true,
-      message: "Friend request sent",
-      sentRequests: user.sentRequests 
+      message: "Friend request sent"
     });
 
   } catch (err) {
     console.error("Error adding friend:", err);
-    return res.status(500).json({ 
+    return res.status(400).json({ 
       success: false,
-      message: "Error adding friend",
+      message: "Invalid friend ID",
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };
 
+
+
+// export const getAllUsers = async (req, res) => {
+//   try {
+//     const currentUserId = req.user._id; // Get current user ID from auth middleware
+    
+//     // Exclude current user and only select necessary fields
+//     const users = await User.find({ _id: { $ne: currentUserId } })
+//       .select("_id name email photo friends sentRequests");
+    
+//     res.status(200).json({ 
+//       success: true, 
+//       users 
+//     });
+//   } catch (err) {
+//     console.error("Error fetching users:", err);
+//     res.status(500).json({
+//       success: false,  
+//       message: "Error fetching users", 
+//       error: err.message 
+//     });
+//   }
+// };
+
+// Backend controller
+
+
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
-    res.status(200).json({ success: true, users });
+    const currentUserId = req.user._id;
+    const users = await User.find({ 
+      _id: { $ne: currentUserId },
+      friends: { $ne: currentUserId }
+    })
+    .select('_id name email photo friends sentRequests')
+    .lean();
+
+    const usersWithStatus = users.map(user => ({
+      ...user,
+      isRequestSent: user.sentRequests.some(id => id.equals(currentUserId))
+    }));
+
+    res.status(200).json({ success: true, users: usersWithStatus });
   } catch (err) {
-    res.status(500).json({success: false,  message: "Error fetching users", error: err });
+    res.status(500).json({ success: false, message: "Error fetching users" });
   }
 };
 
 
+// export const acceptRequest = async (req, res) => {
+//   try {
+//     const { requestId } = req.body;
+//     const userId = req.user._id;
+
+//     // 1. Add each other as friends
+//     await User.findByIdAndUpdate(userId, {
+//       $push: { friends: requestId },
+//       $pull: { friendRequests: requestId }
+//     });
+    
+//     await User.findByIdAndUpdate(requestId, {
+//       $push: { friends: userId },
+//       $pull: { sentRequests: userId }
+//     });
+
+//     // 2. Return success response
+//     res.status(200).json({
+//       success: true,
+//       message: "Friend request accepted",
+//       newFriend: requestId
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Error accepting friend request",
+//       error: err.message
+//     });
+//   }
+// };
+
+// Accept friend request
 export const acceptRequest = async (req, res) => {
   try {
     const { requestId } = req.body;
-    const userId = req.user.id;
+    const currentUserId = req.user._id;
 
-    // 1. Add each other as friends
-    await User.findByIdAndUpdate(userId, {
-      $push: { friends: requestId },
-      $pull: { friendRequests: requestId }
-    });
-    
-    await User.findByIdAndUpdate(requestId, {
-      $push: { friends: userId },
-      $pull: { sentRequests: userId }
-    });
+    // Add each other as friends and remove from requests
+    await Promise.all([
+      User.findByIdAndUpdate(currentUserId, {
+        $addToSet: { friends: requestId },
+        $pull: { friendRequests: requestId }
+      }),
+      User.findByIdAndUpdate(requestId, {
+        $addToSet: { friends: currentUserId },
+        $pull: { sentRequests: currentUserId }
+      })
+    ]);
 
-    // 2. Return success response
-    res.status(200).json({
-      success: true,
-      message: "Friend request accepted",
-      newFriend: requestId
-    });
-
+    res.status(200).json({ success: true, message: "Friend request accepted" });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error accepting friend request",
-      error: err.message
-    });
+    res.status(500).json({ success: false, message: "Error accepting request" });
   }
 };
 
+// export const rejectRequest = async (req, res) => {
+//   try {
+//     const { requestId } = req.body;
+//     const userId = req.user.id;
+
+//     // Remove from requests
+//     await User.findByIdAndUpdate(userId, {
+//       $pull: { friendRequests: requestId }
+//     });
+    
+//     await User.findByIdAndUpdate(requestId, {
+//       $pull: { sentRequests: userId }
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Friend request rejected"
+//     });
+
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Error rejecting friend request",
+//       error: err.message
+//     });
+//   }
+// };
+
+
+
+// Reject friend request
 export const rejectRequest = async (req, res) => {
   try {
     const { requestId } = req.body;
-    const userId = req.user.id;
+    const currentUserId = req.user._id;
 
     // Remove from requests
-    await User.findByIdAndUpdate(userId, {
-      $pull: { friendRequests: requestId }
-    });
-    
-    await User.findByIdAndUpdate(requestId, {
-      $pull: { sentRequests: userId }
-    });
+    await Promise.all([
+      User.findByIdAndUpdate(currentUserId, {
+        $pull: { friendRequests: requestId }
+      }),
+      User.findByIdAndUpdate(requestId, {
+        $pull: { sentRequests: currentUserId }
+      })
+    ]);
 
-    res.status(200).json({
-      success: true,
-      message: "Friend request rejected"
-    });
-
+    res.status(200).json({ success: true, message: "Friend request rejected" });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error rejecting friend request",
-      error: err.message
-    });
+    res.status(500).json({ success: false, message: "Error rejecting request" });
   }
 };
-
 
 export const getFriendRequests = async (req, res) => {
   try {
@@ -263,6 +362,29 @@ export const getFriendRequests = async (req, res) => {
       success: false,
       message: "Error fetching friend requests",
       error: err.message 
+    });
+  }
+};
+
+
+
+export const getSentRequests = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId)
+      .populate({
+        path: 'sentRequests',
+        select: '_id name email photo status lastSeen'
+      });
+    
+    res.status(200).json({
+      success: true,
+      requests: user.sentRequests || []
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching sent requests"
     });
   }
 };
