@@ -5,40 +5,6 @@ import useAuthStore from "../store/authStore.js";
 import useChatStore from "../store/chatStore.js";
 
 const ChatList = ({ isMobile, onSelectChat }) => {
-  // const chats = [
-  //   {
-  //     id: 1,
-  //     name: "Sonu Pradhan",
-  //     status: "Available",
-  //     lastMessage: "Welcome, Sonu Pradhan",
-  //     time: "",
-  //     unread: false,
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Aarav Sharma",
-  //     status: "",
-  //     lastMessage: "Hey, are we still meeting tomorrow?",
-  //     time: "9:15 AM",
-  //     unread: true,
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Priya Chettri",
-  //     status: "",
-  //     lastMessage: "Please review the documents I sent",
-  //     time: "10:30 AM",
-  //     unread: true,
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "Rahul Gupta",
-  //     status: "Online",
-  //     lastMessage: "Did you get my last message?",
-  //     time: "11:45 AM",
-  //     unread: true,
-  //   },
-  // ];
 
   const chats = useChatStore((state) => state.chats);
   console.log('Rendering chats:', chats);

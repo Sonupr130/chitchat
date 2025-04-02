@@ -2,6 +2,40 @@ import Chat from "../models/chatModel.js";
 import User from "../models/userModel.js";
 import mongoose from "mongoose";
 
+
+export const sendMessage = async (req, res) => {
+  const { senderId, receiverId, groupId, message } = req.body;
+
+  try {
+    const chatData = { senderId, message, readBy: [senderId] };
+    
+    if (groupId) chatData.groupId = groupId;
+    else chatData.receiverId = receiverId;
+
+    const chat = await Chat.create(chatData);
+    res.status(200).json(chat);
+  } catch (err) {
+    res.status(500).json({ message: "Error sending message", error: err });
+  }
+};
+
+export const getMessages = async (req, res) => {
+  const { senderId, receiverId, groupId } = req.query;
+
+try {
+  const query = groupId ? { groupId } : {
+    $or: [{ senderId, receiverId }, { senderId: receiverId, receiverId: senderId }]
+  };
+
+  const chats = await Chat.find(query).sort("timestamp");
+  res.status(200).json(chats);
+} catch (err) {
+  res.status(500).json({ message: "Error fetching messages", error: err });
+}
+};
+
+
+
 // In your userController.js
 export const createChat = async (req, res) => {
   try {
@@ -110,36 +144,7 @@ export const getChats = async (req, res) => {
 
 
 
-export const sendMessage = async (req, res) => {
-    const { senderId, receiverId, groupId, message } = req.body;
 
-    try {
-      const chatData = { senderId, message, readBy: [senderId] };
-      
-      if (groupId) chatData.groupId = groupId;
-      else chatData.receiverId = receiverId;
-  
-      const chat = await Chat.create(chatData);
-      res.status(200).json(chat);
-    } catch (err) {
-      res.status(500).json({ message: "Error sending message", error: err });
-    }
-};
-
-export const getMessages = async (req, res) => {
-    const { senderId, receiverId, groupId } = req.query;
-
-  try {
-    const query = groupId ? { groupId } : {
-      $or: [{ senderId, receiverId }, { senderId: receiverId, receiverId: senderId }]
-    };
-
-    const chats = await Chat.find(query).sort("timestamp");
-    res.status(200).json(chats);
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching messages", error: err });
-  }
-};
 
 
 
