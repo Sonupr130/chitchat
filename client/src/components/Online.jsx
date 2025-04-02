@@ -73,7 +73,7 @@
 //                   <div className="relative flex-shrink-0">
 //                     <div className="w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center">
 //                       <img
-//                         src={defaultImage || '/default-profile.png'} 
+//                         src={defaultImage || '/default-profile.png'}
 //                         alt={friend.name}
 //                         className="object-cover"
 //                       />
@@ -112,10 +112,13 @@
 
 
 
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Check, Search, UserPlus, X } from "lucide-react";
 import useAuthStore from "../store/authStore.js";
+import useChatStore from "../store/chatStore.js";
+import { useNavigate } from "react-router-dom";
 
 const Online = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -123,21 +126,68 @@ const Online = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuthStore();
-
+  const navigate = useNavigate();
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
+  const { addChat } = useChatStore();
+
+
+  const handleFriendClick = async (friend) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // First add to backend
+      const response = await axios.post(
+        "http://localhost:8000/api/user/chats",
+        {
+          friendId: friend._id,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Backend response:", response.data);
+
+      if (response.data.success) {
+        // Then add to local state
+        addChat({
+          id: friend._id, // Changed from _id to id to match your store
+          name: friend.name,
+          status: friend.status || "Online",
+          lastMessage: `Started chatting with ${friend.name}`,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          unread: false,
+          image: friend.photo,
+        });
+
+        // Optionally navigate to the chat
+        navigate(`/chat/${friend._id}`);
+      }
+    } catch (error) {
+      console.error(
+        "Error creating chat:",
+        error.response?.data || error.message
+      );
+      // Show error to user
+      setError("Failed to start chat. Please try again.");
+    }
+  };
+  console.log("Current chats:", useChatStore.getState().chats);
+
   const defaultImage =
     "https://i.pinimg.com/736x/e4/04/13/e40413c5fd5cf7dc4f41aa6d911ce764.jpg";
-
-
 
   useEffect(() => {
     const fetchFriends = async () => {
       try {
         const token = localStorage.getItem("token");
-        
+
         if (!token) {
           throw new Error("No authentication token found");
         }
@@ -159,10 +209,12 @@ const Online = () => {
         );
 
         if (response.data.success) {
-          setFriends(response.data.friends.map(friend => ({
-            ...friend,
-            photo: friend.photo || defaultImage // Ensure photo has a fallback
-          })));
+          setFriends(
+            response.data.friends.map((friend) => ({
+              ...friend,
+              photo: friend.photo || defaultImage, // Ensure photo has a fallback
+            }))
+          );
         } else {
           throw new Error(response.data.message || "Failed to fetch friends");
         }
@@ -224,12 +276,13 @@ const Online = () => {
               <div
                 key={friend._id}
                 className="px-4 py-3 border-b hover:bg-gray-50 cursor-pointer"
+                onClick={() => handleFriendClick(friend)}
               >
                 <div className="flex items-center">
                   <div className="relative flex-shrink-0">
                     <div className="w-10 h-10 bg-gray-300 rounded-full overflow-hidden flex items-center justify-center">
                       <img
-                        src={friend.photo || defaultImage} 
+                        src={friend.photo || defaultImage}
                         alt={friend.name}
                         className="object-cover w-full h-full"
                       />
@@ -251,7 +304,6 @@ const Online = () => {
                 </div>
               </div>
             ))}
-
           </div>
         </div>
       </div>
@@ -260,4 +312,3 @@ const Online = () => {
 };
 
 export default Online;
-

@@ -41,65 +41,6 @@ export const updateProfilePicture = async (req, res) => {
 };
 
 
-// export const addFriend = async (req, res) => {
-//   const { friendId } = req.body;
-
-//   try {
-//     // Validate friendId
-//     if (!mongoose.Types.ObjectId.isValid(friendId)) {
-//       return res.status(400).json({ message: "Invalid friend ID" });
-//     }
-
-//     // Check if friend exists
-//     const friend = await User.findById(friendId);
-//     if (!friend) {
-//       return res.status(404).json({ message: "Friend not found" });
-//     }
-
-//     // Get current user
-//     const user = await User.findById(req.user.id);
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     // Check if already friends
-//     if (user.friends.includes(friendId)) {
-//       return res.status(400).json({ 
-//         message: "Already friends",
-//         friends: user.friends 
-//       });
-//     }
-
-//     // Check if request already sent
-//     if (user.sentRequests.includes(friendId)) {
-//       return res.status(400).json({ 
-//         message: "Request already sent",
-//         sentRequests: user.sentRequests 
-//       });
-//     }
-
-//     // Add to sender's sentRequests and receiver's friendRequests
-//     user.sentRequests.push(friendId);
-//     friend.friendRequests.push(req.user.id);
-    
-//     // Save both users
-//     await Promise.all([user.save(), friend.save()]);
-
-//     return res.status(200).json({ 
-//       success: true,
-//       message: "Friend request sent",
-//       sentRequests: user.sentRequests 
-//     });
-
-//   } catch (err) {
-//     console.error("Error adding friend:", err);
-//     return res.status(500).json({ 
-//       success: false,
-//       message: "Error adding friend",
-//       error: process.env.NODE_ENV === 'development' ? err.message : undefined
-//     });
-//   }
-// };
 
 
 export const addFriend = async (req, res) => {
@@ -175,30 +116,6 @@ export const addFriend = async (req, res) => {
 
 
 
-// export const getAllUsers = async (req, res) => {
-//   try {
-//     const currentUserId = req.user._id; // Get current user ID from auth middleware
-    
-//     // Exclude current user and only select necessary fields
-//     const users = await User.find({ _id: { $ne: currentUserId } })
-//       .select("_id name email photo friends sentRequests");
-    
-//     res.status(200).json({ 
-//       success: true, 
-//       users 
-//     });
-//   } catch (err) {
-//     console.error("Error fetching users:", err);
-//     res.status(500).json({
-//       success: false,  
-//       message: "Error fetching users", 
-//       error: err.message 
-//     });
-//   }
-// };
-
-// Backend controller
-
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -222,39 +139,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 
-// export const acceptRequest = async (req, res) => {
-//   try {
-//     const { requestId } = req.body;
-//     const userId = req.user._id;
 
-//     // 1. Add each other as friends
-//     await User.findByIdAndUpdate(userId, {
-//       $push: { friends: requestId },
-//       $pull: { friendRequests: requestId }
-//     });
-    
-//     await User.findByIdAndUpdate(requestId, {
-//       $push: { friends: userId },
-//       $pull: { sentRequests: userId }
-//     });
-
-//     // 2. Return success response
-//     res.status(200).json({
-//       success: true,
-//       message: "Friend request accepted",
-//       newFriend: requestId
-//     });
-
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Error accepting friend request",
-//       error: err.message
-//     });
-//   }
-// };
-
-// Accept friend request
 export const acceptRequest = async (req, res) => {
   try {
     const { requestId } = req.body;
@@ -277,34 +162,6 @@ export const acceptRequest = async (req, res) => {
     res.status(500).json({ success: false, message: "Error accepting request" });
   }
 };
-
-// export const rejectRequest = async (req, res) => {
-//   try {
-//     const { requestId } = req.body;
-//     const userId = req.user.id;
-
-//     // Remove from requests
-//     await User.findByIdAndUpdate(userId, {
-//       $pull: { friendRequests: requestId }
-//     });
-    
-//     await User.findByIdAndUpdate(requestId, {
-//       $pull: { sentRequests: userId }
-//     });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Friend request rejected"
-//     });
-
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Error rejecting friend request",
-//       error: err.message
-//     });
-//   }
-// };
 
 
 

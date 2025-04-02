@@ -40,17 +40,6 @@ export const googleLogin = async (req, res) => {
       },
     });
 
-
-    // 4. Optional: Upload to Cloudinary in background
-    // if (!user.photoCloudinary) {
-    //   try {
-    //     const cloudinaryUrl = await uploadImage(googlePhotoUrl);
-    //     user.photoCloudinary = cloudinaryUrl;
-    //     await user.save();
-    //   } catch (uploadError) {
-    //     console.error('Background upload failed:', uploadError);
-    //   }
-    // }
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server Error" });

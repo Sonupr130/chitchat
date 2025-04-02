@@ -1,49 +1,56 @@
 import { MoreVertical } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore.js";
+import useChatStore from "../store/chatStore.js";
 
 const ChatList = ({ isMobile, onSelectChat }) => {
-  const chats = [
-    {
-      id: 1,
-      name: "Sonu Pradhan",
-      status: "Available",
-      lastMessage: "Welcome, Sonu Pradhan",
-      time: "",
-      unread: false,
-    },
-    {
-      id: 2,
-      name: "Aarav Sharma",
-      status: "",
-      lastMessage: "Hey, are we still meeting tomorrow?",
-      time: "9:15 AM",
-      unread: true,
-    },
-    {
-      id: 3,
-      name: "Priya Chettri",
-      status: "",
-      lastMessage: "Please review the documents I sent",
-      time: "10:30 AM",
-      unread: true,
-    },
-    {
-      id: 4,
-      name: "Rahul Gupta",
-      status: "Online",
-      lastMessage: "Did you get my last message?",
-      time: "11:45 AM",
-      unread: true,
-    },
-  ];
+  // const chats = [
+  //   {
+  //     id: 1,
+  //     name: "Sonu Pradhan",
+  //     status: "Available",
+  //     lastMessage: "Welcome, Sonu Pradhan",
+  //     time: "",
+  //     unread: false,
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Aarav Sharma",
+  //     status: "",
+  //     lastMessage: "Hey, are we still meeting tomorrow?",
+  //     time: "9:15 AM",
+  //     unread: true,
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Priya Chettri",
+  //     status: "",
+  //     lastMessage: "Please review the documents I sent",
+  //     time: "10:30 AM",
+  //     unread: true,
+  //   },
+  //   {
+  //     id: 4,
+  //     name: "Rahul Gupta",
+  //     status: "Online",
+  //     lastMessage: "Did you get my last message?",
+  //     time: "11:45 AM",
+  //     unread: true,
+  //   },
+  // ];
 
+  const chats = useChatStore((state) => state.chats);
+  console.log('Rendering chats:', chats);
   const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
+
+  useEffect(() => {
+    console.log('Chats updated:', chats);
+  }, [chats]);
 
   const defaultImage =
     "https://photosrush.com/wp-content/uploads/no-love-dp-girl-attitude-for-instagram.jpg";
@@ -134,3 +141,19 @@ const ChatList = ({ isMobile, onSelectChat }) => {
 };
 
 export default ChatList;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -249,3 +249,15 @@ const ChatArea = ({ isMobile, userId, receiverId, groupId }) => {
 };
 
 export default ChatArea;
+
+
+
+
+
+
+
+
+
+
+
+
