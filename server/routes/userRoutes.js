@@ -2,7 +2,6 @@ import express from "express";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { acceptRequest, addFriend, getAllUsers, getFriendRequests, getFriends, getSentRequests, rejectRequest, updateProfilePicture } from "../controllers/userController.js";
 import multer from "multer";
-import { createChat, getChats } from "../controllers/chatController.js";
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
@@ -24,8 +23,5 @@ router.patch(
     updateProfilePicture
   );
 
-
-  router.post('/chats', authMiddleware, createChat);
-router.get('/chats', authMiddleware, getChats);
 
 export default router;

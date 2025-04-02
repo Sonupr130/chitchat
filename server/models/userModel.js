@@ -35,6 +35,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       maxlength: 500,
     },
+    chats: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        unique: true, // Ensure no duplicates
+      },
+    ],
     status: {
       type: String,
       enum: ["online", "offline", "away"],
@@ -53,10 +60,6 @@ const userSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    chats: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
     lastSeen: {
       type: Date,
       default: Date.now,

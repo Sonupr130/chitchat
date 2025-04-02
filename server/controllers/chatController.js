@@ -2,173 +2,136 @@ import Chat from "../models/chatModel.js";
 import User from "../models/userModel.js";
 import mongoose from "mongoose";
 
-
 export const sendMessage = async (req, res) => {
   const { senderId, receiverId, groupId, message } = req.body;
 
   try {
-    const chatData = { senderId, message, readBy: [senderId] };
+    // Validate required fields
+    if (!message) {
+      return res.status(400).json({ message: "Message content is required" });
+    }
     
-    if (groupId) chatData.groupId = groupId;
-    else chatData.receiverId = receiverId;
+    if (!senderId) {
+      return res.status(400).json({ message: "Sender ID is required" });
+    }
+    
+    if (!receiverId && !groupId) {
+      return res.status(400).json({ message: "Either receiverId or groupId is required" });
+    }
+    
+    // Create chat document
+    const chatData = { 
+      senderId, 
+      message, 
+      timestamp: new Date(),
+      readBy: [senderId] 
+    };
+    
+    if (groupId) {
+      chatData.groupId = groupId;
+    } else {
+      chatData.receiverId = receiverId;
+      
+      // Update both users' chat lists in a transaction to ensure consistency
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      
+      try {
+        // Update sender's chats
+        await User.findByIdAndUpdate(
+          senderId,
+          { $addToSet: { chats: receiverId } },
+          { session, new: true }
+        );
+        
+        // Update receiver's chats
+        await User.findByIdAndUpdate(
+          receiverId,
+          { $addToSet: { chats: senderId } },
+          { session, new: true }
+        );
+        
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        throw error;
+      } finally {
+        session.endSession();
+      }
+    }
 
     const chat = await Chat.create(chatData);
-    res.status(200).json(chat);
+    
+    // Return the newly created message
+    res.status(201).json(chat);
   } catch (err) {
-    res.status(500).json({ message: "Error sending message", error: err });
+    console.error("Error in sendMessage:", err);
+    res.status(500).json({ message: "Error sending message", error: err.message });
   }
 };
 
 export const getMessages = async (req, res) => {
   const { senderId, receiverId, groupId } = req.query;
 
-try {
-  const query = groupId ? { groupId } : {
-    $or: [{ senderId, receiverId }, { senderId: receiverId, receiverId: senderId }]
-  };
-
-  const chats = await Chat.find(query).sort("timestamp");
-  res.status(200).json(chats);
-} catch (err) {
-  res.status(500).json({ message: "Error fetching messages", error: err });
-}
-};
-
-
-
-// In your userController.js
-export const createChat = async (req, res) => {
   try {
-    const { friendId } = req.body;
-    const userId = req.user._id;
-
-    // Validate friendId
-    if (!mongoose.Types.ObjectId.isValid(friendId)) {
-      return res.status(400).json({ message: 'Invalid friend ID' });
+    // Ensure required parameters
+    if ((!senderId || !receiverId) && !groupId) {
+      return res.status(400).json({ message: "Missing required parameters" });
     }
-
-    // Check if users exist
-    const [user, friend] = await Promise.all([
-      User.findById(userId),
-      User.findById(friendId)
-    ]);
-
-    if (!user || !friend) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Check if chat already exists
-    if (user.chats.includes(friendId)) {
-      return res.status(200).json({ 
-        success: true,
-        message: 'Chat already exists'
-      });
-    }
-
-    // Add to both users' chat lists
-    await User.findByIdAndUpdate(userId, {
-      $addToSet: { chats: friendId }
-    });
-
-    await User.findByIdAndUpdate(friendId, {
-      $addToSet: { chats: userId }
-    });
-
-    // Return the updated chat list
-    const updatedUser = await User.findById(userId).populate({
-      path: 'chats',
-      select: '_id name email photo status'
-    });
-
-    res.status(200).json({
-      success: true,
-      chats: updatedUser.chats.map(chat => ({
-        id: chat._id,
-        name: chat.name,
-        status: chat.status || "Offline",
-        photo: chat.photo
-      }))
-    });
-
-  } catch (error) {
-    console.error('Error creating chat:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Error creating chat',
-      error: error.message 
-    });
-  }
-};
-
-
-
-export const getChats = async (req, res) => {
-  try {
-    const userId = req.user._id;
     
-    // Find the user and populate the chats
-    const user = await User.findById(userId)
-      .populate({
-        path: 'chats',
-        select: '_id name email photo status lastSeen'
-      });
+    // Build query for direct messages or group messages
+    const query = groupId 
+      ? { groupId } 
+      : {
+          $or: [
+            { senderId, receiverId }, 
+            { senderId: receiverId, receiverId: senderId }
+          ]
+        };
+
+    // Get messages ordered by timestamp
+    const chats = await Chat.find(query)
+      .sort({ timestamp: 1 })
+      .populate('senderId', 'name photo photoCloudinary')
+      .exec();
     
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    // Mark messages as seen if they were sent to this user
+    if (senderId && !groupId) {
+      await Chat.updateMany(
+        { senderId: receiverId, receiverId: senderId, readBy: { $ne: senderId } },
+        { $addToSet: { readBy: senderId } }
+      );
     }
-
-    // Format the chats for the frontend
-    const formattedChats = user.chats.map(chat => ({
-      id: chat._id,
-      name: chat.name,
-      status: chat.status || "Offline",
-      lastMessage: `Chat with ${chat.name}`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      unread: false,
-      image: chat.photo
-    }));
-
-    res.status(200).json({ 
-      success: true,
-      chats: formattedChats
-    });
-  } catch (error) {
-    console.error("Error fetching chats:", error);
-    res.status(500).json({ 
-      success: false,
-      message: "Error fetching chats",
-      error: error.message 
-    });
-  }
-};
-
-
-
-
-
-
-
-
-export const createGroup = async (req, res) => {
-    const { name, members } = req.body;
-
-  try {
-    const group = await Group.create({ name, members });
-    res.status(200).json(group);
+    
+    res.status(200).json(chats);
   } catch (err) {
-    res.status(500).json({ message: "Error creating group", error: err });
+    console.error("Error in getMessages:", err);
+    res.status(500).json({ message: "Error fetching messages", error: err.message });
   }
-}
+};
 
-
-
-export const markAsRead = async (req, res) => {
+// Add a method to handle reading messages
+export const markMessageRead = async (req, res) => {
   const { messageId, userId } = req.body;
-
+  
   try {
-    await Chat.findByIdAndUpdate(messageId, { $addToSet: { readBy: userId } });
-    res.status(200).json({ message: "Message marked as read" });
+    if (!messageId || !userId) {
+      return res.status(400).json({ message: "MessageId and userId are required" });
+    }
+    
+    const updatedMessage = await Chat.findByIdAndUpdate(
+      messageId,
+      { $addToSet: { readBy: userId } },
+      { new: true }
+    );
+    
+    if (!updatedMessage) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+    
+    res.status(200).json(updatedMessage);
   } catch (err) {
-    res.status(500).json({ message: "Error marking message", error: err });
+    console.error("Error marking message as read:", err);
+    res.status(500).json({ message: "Error updating message", error: err.message });
   }
 };

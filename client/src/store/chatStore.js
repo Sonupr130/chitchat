@@ -44,6 +44,35 @@ const useChatStore = create(
             set({ isTyping: true });
             setTimeout(() => set({ isTyping: false }), 2000);
           });
+          
+          // Add message read receipt listener
+          socket.on("messageRead", ({messageId, userId}) => {
+            // Update read status for messages
+            const { currentChat } = get();
+            if (currentChat) {
+              set((state) => ({
+                chats: state.chats.map(chat => {
+                  if (chat.id === currentChat.id) {
+                    return {
+                      ...chat,
+                      messages: chat.messages.map(msg => {
+                        // If there's a way to match the message with messageId, update it
+                        // For now, we'll just mark any unread message as read
+                        if (!msg.readBy.includes(userId)) {
+                          return {
+                            ...msg,
+                            readBy: [...msg.readBy, userId]
+                          };
+                        }
+                        return msg;
+                      })
+                    };
+                  }
+                  return chat;
+                })
+              }));
+            }
+          });
         }
       },
       
@@ -75,7 +104,7 @@ const useChatStore = create(
       }),
       
       // Send a message
-      sendMessage: (message) => {
+      sendMessage: async (message) => {
         const { currentChat } = get();
         const currentUser = JSON.parse(localStorage.getItem('auth-storage')).state.user;
         
@@ -87,40 +116,81 @@ const useChatStore = create(
           message: message
         };
         
-        // Emit to socket
+        // Emit to socket for real-time communication
         socket.emit("sendMessage", messageData);
         
-        // Send to API
-        fetch("http://localhost:8000/api/chat/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(messageData)
-        })
-        .then(res => res.json())
-        .then(data => {
-          console.log("Message saved:", data);
-          // Update local state
+        try {
+          // Send to API to store in database
+          const response = await fetch("http://localhost:8000/api/chat/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${JSON.parse(localStorage.getItem('auth-storage')).state.token}`
+            },
+            body: JSON.stringify(messageData)
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log("Message saved to database:", data);
+          
+          // Verify the chat was added to the user's chats
+          const userResponse = await fetch(`http://localhost:8000/api/chat/${currentUser._id}`, {
+            headers: {
+              "Authorization": `Bearer ${JSON.parse(localStorage.getItem('auth-storage')).state.token}`
+            }
+          });
+          
+          if (userResponse.ok) {
+            const updatedUser = await userResponse.json();
+            // You might want to update your local user state here if needed
+          }
+          
+          // Update local state with the confirmed message from the server
           get().addMessageToChat(currentChat.id, {
             senderId: currentUser._id, 
             message: message,
-            timestamp: new Date(),
-            readBy: [currentUser._id]
+            timestamp: data.timestamp || new Date(),
+            readBy: data.readBy || [currentUser._id],
+            _id: data._id // Store the database ID for reference
           });
-        })
-        .catch(err => console.error("Error sending message:", err));
+          
+          return data;
+        } catch (err) {
+          console.error("Error sending message:", err);
+          throw err;
+        }
       },
       
       // Add message to a specific chat
       addMessageToChat: (chatId, messageData) => set((state) => {
         const newChats = state.chats.map(chat => {
           if (chat.id === chatId) {
+            // Find if this message already exists (for pending -> confirmed updates)
+            const messageExists = chat.messages.some(msg => 
+              msg.pending && msg.message === messageData.message && 
+              msg.senderId === messageData.senderId
+            );
+            
+            // If pending message exists, update it; otherwise add new message
+            const updatedMessages = messageExists 
+              ? chat.messages.map(msg => {
+                  if (msg.pending && msg.message === messageData.message && 
+                      msg.senderId === messageData.senderId) {
+                    return { ...messageData, pending: false };
+                  }
+                  return msg;
+                })
+              : [...(chat.messages || []), messageData];
+            
             const updatedChat = {
               ...chat,
               lastMessage: messageData.message,
               time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              messages: [...(chat.messages || []), messageData]
+              messages: updatedMessages
             };
             return updatedChat;
           }
@@ -134,24 +204,36 @@ const useChatStore = create(
         };
       }),
       
-      // Load messages for a chat
+      // Load messages for a chat from database
       loadMessages: async (chatId) => {
         const currentUser = JSON.parse(localStorage.getItem('auth-storage')).state.user;
         if (!currentUser) return;
         
         try {
-          const response = await fetch(`http://localhost:8000/api/chat/messages?senderId=${currentUser._id}&receiverId=${chatId}`);
+          const response = await fetch(`http://localhost:8000/api/chat/messages?senderId=${currentUser._id}&receiverId=${chatId}`, {
+            headers: {
+              // Add authorization if required by your API
+              "Authorization": `Bearer ${JSON.parse(localStorage.getItem('auth-storage')).state.token}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+          
           const messages = await response.json();
           
+          // Update local chat messages with server data
           set((state) => ({
             chats: state.chats.map(chat => {
               if (chat.id === chatId) {
                 return {
                   ...chat,
                   messages: messages.map(msg => ({
+                    _id: msg._id, // Store the database ID
                     senderId: msg.senderId,
                     message: msg.message,
-                    timestamp: msg.timestamp,
+                    timestamp: msg.timestamp || msg.createdAt || new Date(),
                     readBy: msg.readBy || []
                   }))
                 };
@@ -159,8 +241,11 @@ const useChatStore = create(
               return chat;
             })
           }));
+          
+          return messages;
         } catch (error) {
           console.error("Error loading messages:", error);
+          throw error;
         }
       },
       
@@ -171,6 +256,17 @@ const useChatStore = create(
           socket.emit("typing", { 
             senderId: currentUser._id, 
             receiverId 
+          });
+        }
+      },
+      
+      // Mark message as read
+      markMessageAsRead: (messageId) => {
+        const currentUser = JSON.parse(localStorage.getItem('auth-storage')).state.user;
+        if (currentUser && messageId) {
+          socket.emit("messageRead", {
+            messageId,
+            userId: currentUser._id
           });
         }
       },
