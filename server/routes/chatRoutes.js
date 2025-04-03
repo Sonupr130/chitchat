@@ -1,12 +1,18 @@
 import express from "express";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
-import { getMessages, markMessageRead, sendMessage } from "../controllers/chatController.js";
+import { getMessages, sendMessage } from "../controllers/chatController.js";
 import User from "../models/userModel.js";
+import { messageController } from "../controllers/messageController.js";
 const router = express.Router();
 
 router.post("/send", authMiddleware, sendMessage);
 router.get("/messages", authMiddleware, getMessages);
-router.post("/markRead", authMiddleware, markMessageRead);
+
+
+
+router.post('/sends', authMiddleware, messageController.sendMessage);
+router.get('/messagess', authMiddleware, messageController.getMessagesBySenders);
+router.get('/:senderId',authMiddleware, messageController.getMessagesWithSender);
 
 
 // In your user routes

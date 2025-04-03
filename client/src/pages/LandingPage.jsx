@@ -45,6 +45,7 @@ const LandingPage = () => {
       token: data.token,
       user: data.user
     });
+    console.log("this is token of a logged in user", data.token)
 
     console.log("Login successful, user data:", data.user);
       navigate("/chat");
