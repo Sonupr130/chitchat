@@ -22,6 +22,7 @@ router.patch(
     upload.single('profilePicture'),
     updateProfilePicture
   );
+  router.post("/chats")
 
 
 export default router;

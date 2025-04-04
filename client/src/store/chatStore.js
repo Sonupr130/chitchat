@@ -22,7 +22,8 @@ const useChatStore = create(
       ],
       currentChat: null,
       isTyping: false,
-      
+
+       setChats: (newChats) => set({ chats: newChats }),
       // Connect socket when user logs in
       connectSocket: (userId) => {
         if (userId) {
@@ -294,3 +295,16 @@ const useChatStore = create(
 );
 
 export default useChatStore;
+
+
+
+
+
+
+
+
+
+
+
+
+

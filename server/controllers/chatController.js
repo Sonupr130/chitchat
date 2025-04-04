@@ -139,3 +139,98 @@ export const getMessages = async (req, res) => {
   }
 };
 
+
+
+export const getChats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const chats = await Chat.find({
+      $or: [
+        { senderId: userId },
+        { receiverId: userId }
+      ]
+    })
+    .populate("senderId", "name photo")
+    .populate("receiverId", "name photo")
+    .sort({ timestamp: -1 });
+
+    res.status(200).json({
+      success: true,
+      chats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
+export const startChat = async (req, res) => {
+  try {
+    const { receiverId, message } = req.body;
+    const senderId = req.user._id;
+
+    // Validate receiverId
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid receiver ID"
+      });
+    }
+
+    // Check if receiver exists
+    const receiver = await User.findById(receiverId);
+    if (!receiver) {
+      return res.status(404).json({
+        success: false,
+        message: "Receiver not found"
+      });
+    }
+
+    // Check if chat already exists between these users
+    const existingChat = await Chat.findOne({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId }
+      ]
+    });
+
+    if (existingChat) {
+      return res.status(200).json({
+        success: true,
+        chat: existingChat,
+        message: "Existing chat retrieved"
+      });
+    }
+
+    // Create new chat
+    const newChat = new Chat({
+      senderId,
+      receiverId,
+      message: message || `Started chatting with ${receiver.name}`,
+      timestamp: new Date()
+    });
+
+    await newChat.save();
+
+    res.status(201).json({
+      success: true,
+      chat: newChat,
+      message: "Chat started successfully"
+    });
+
+  } catch (error) {
+    console.error("Error starting chat:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+

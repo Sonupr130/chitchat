@@ -101,6 +101,7 @@ export const messageController = {
    * @route   GET /api/messages
    * @access  Private
    */
+  
   getMessagesBySenders: async (req, res) => {
     try {
       const userId = req.user._id;
