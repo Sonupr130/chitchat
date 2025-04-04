@@ -122,7 +122,7 @@ const useChatStore = create(
         
         try {
           // Send to API to store in database
-          const response = await fetch("http://localhost:8000/api/chat/send", {
+          const response = await fetch("http://localhost:8000/api/chat/sends", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -130,6 +130,7 @@ const useChatStore = create(
             },
             body: JSON.stringify(messageData)
           });
+          console.log("user response from chat store",response)
           
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
@@ -144,6 +145,7 @@ const useChatStore = create(
               "Authorization": `Bearer ${JSON.parse(localStorage.getItem('auth-storage')).state.token}`
             }
           });
+          console.log("user response in chat store",userResponse)
           
           if (userResponse.ok) {
             const updatedUser = await userResponse.json();
