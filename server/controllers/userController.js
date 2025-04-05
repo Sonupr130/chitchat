@@ -282,3 +282,28 @@ export const getFriends = async (req, res) => {
     });
   }
 };
+
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Optional: Validate ID format first
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const user = await User.findById(id)
+      .select('_id name email photo friends sentRequests friendRequests status lastSeen')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ success: true, user });
+  } catch (err) {
+    console.error('Error fetching user by ID:', err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};

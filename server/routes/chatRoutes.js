@@ -3,6 +3,7 @@ import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { getChats, getMessages, sendMessage, startChat } from "../controllers/chatController.js";
 import User from "../models/userModel.js";
 import { messageController } from "../controllers/messageController.js";
+import { getUserById } from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.post('/sends', authMiddleware, messageController.sendMessage);
 router.get('/messagess', authMiddleware, messageController.getMessagesBySenders);
 router.get('/:senderId',authMiddleware, messageController.getMessagesWithSender);
 
-
+router.get('/usingid/:id', getUserById);
 
 
 
