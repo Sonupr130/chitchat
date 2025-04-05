@@ -316,17 +316,102 @@ const ChatList = ({ isMobile, onSelectChat }) => {
   };
 
   useEffect(() => {
+    // const fetchChats = async () => {
+    //   try {
+    //     const token = localStorage.getItem("token");
+    //     if (!token) throw new Error("No authentication token found");
+
+    //     const response = await axios.get("http://localhost:8000/api/chat/list", {
+    //       headers: { Authorization: `Bearer ${token}` }
+    //     });
+    //     console.log("data of chats", response);
+        
+    //     if (response.data.success) {
+    //       // Transform the API response to match your frontend structure
+    //       const formattedChats = response.data.chats.map(chat => {
+    //         // Determine if current user is the sender
+    //         const isSender = user._id === chat.senderId._id;
+            
+    //         // Get the other user's info (receiver if current user is sender, sender if current user is receiver)
+    //         const otherUser = isSender ? chat.receiverId : chat.senderId;
+            
+    //         return {
+    //           id: chat._id,
+    //           _id: chat._id,
+    //           name: otherUser?.name || "Unknown User",
+    //           status: "Available",
+    //           lastMessage: chat.message,
+    //           time: new Date(chat.timestamp).toLocaleTimeString([], {
+    //             hour: "2-digit",
+    //             minute: "2-digit"
+    //           }),
+    //           image: otherUser?.photo || defaultImage,
+    //           messages: [{
+    //             _id: chat._id,
+    //             senderId: chat.senderId,
+    //             message: chat.message,
+    //             timestamp: chat.timestamp
+    //           }]
+    //         };
+    //       });
+
+    //       setChats(formattedChats);
+    //     } else {
+    //       throw new Error(response.data.message || "Failed to fetch chats");
+    //     }
+    //   } catch (err) {
+    //     console.error("Fetch chats error:", err);
+    //     setError(err.response?.data?.message || err.message);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+
     const fetchChats = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) throw new Error("No authentication token found");
-
+    
         const response = await axios.get("http://localhost:8000/api/chat/list", {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log("data of chats", response);
         
         if (response.data.success) {
+          // Log the receiverId _id for each chat
+          response.data.chats.forEach(chat => {
+            console.log("Receiver ID 🔥🔥🔥🔥🔥🔥🔥🔥:", chat.receiverId._id);
+          });
+    
           // Transform the API response to match your frontend structure
+          // const formattedChats = response.data.chats.map(chat => {
+          //   // Determine if current user is the sender
+          //   const isSender = user._id === chat.senderId._id;
+            
+          //   // Get the other user's info (receiver if current user is sender, sender if current user is receiver)
+          //   const otherUser = isSender ? chat.receiverId : chat.senderId;
+            
+          //   return {
+          //     id: chat._id,
+          //     _id: chat._id,
+          //     name: otherUser?.name || "Unknown User",
+          //     status: "Available",
+          //     lastMessage: chat.message,
+          //     time: new Date(chat.timestamp).toLocaleTimeString([], {
+          //       hour: "2-digit",
+          //       minute: "2-digit"
+          //     }),
+          //     image: otherUser?.photo || defaultImage,
+          //     messages: [{
+          //       _id: chat._id,
+          //       senderId: chat.senderId,
+          //       message: chat.message,
+          //       timestamp: chat.timestamp
+          //     }]
+          //   };
+          // });
+
+
           const formattedChats = response.data.chats.map(chat => {
             // Determine if current user is the sender
             const isSender = user._id === chat.senderId._id;
@@ -345,6 +430,8 @@ const ChatList = ({ isMobile, onSelectChat }) => {
                 minute: "2-digit"
               }),
               image: otherUser?.photo || defaultImage,
+              receiverId: chat.receiverId._id,  // Add this line to include receiverId
+              senderId: chat.senderId._id,      // You might also want senderId
               messages: [{
                 _id: chat._id,
                 senderId: chat.senderId,
@@ -353,7 +440,38 @@ const ChatList = ({ isMobile, onSelectChat }) => {
               }]
             };
           });
+    
 
+
+          // const formattedChats = response.data.chats.map(chat => {
+          //   // Determine if current user is the sender
+          //   const isSender = user._id === chat.senderId._id;
+            
+          //   // Get the other user's info (receiver if current user is sender, sender if current user is receiver)
+          //   const otherUser = isSender ? chat.receiverId : chat.senderId;
+            
+          //   return {
+          //     id: chat._id,
+          //     _id: chat._id,
+          //     name: otherUser?.name || "Unknown User",
+          //     status: "Available",
+          //     lastMessage: chat.message,
+          //     time: new Date(chat.timestamp).toLocaleTimeString([], {
+          //       hour: "2-digit",
+          //       minute: "2-digit"
+          //     }),
+          //     image: otherUser?.photo || defaultImage,
+          //     receiverId: chat.receiverId._id,  // Add receiver ID here
+          //     otherUserId: otherUser._id,      // Alternative: you might want this
+          //     messages: [{
+          //       _id: chat._id,
+          //       senderId: chat.senderId._id,   // Include sender ID in messages
+          //       receiverId: chat.receiverId._id, // Include receiver ID in messages
+          //       message: chat.message,
+          //       timestamp: chat.timestamp
+          //     }]
+          //   };
+          // });
           setChats(formattedChats);
         } else {
           throw new Error(response.data.message || "Failed to fetch chats");

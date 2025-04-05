@@ -104,15 +104,6 @@
 
 // export default Online;
 
-
-
-
-
-
-
-
-
-
 // import React, { useEffect, useState } from "react";
 // import axios from "axios";
 // import { Check, Search, UserPlus, X } from "lucide-react";
@@ -132,7 +123,6 @@
 //   };
 
 //   const { addChat } = useChatStore();
-
 
 //   const handleFriendClick = async (friend) => {
 //     try {
@@ -315,6 +305,15 @@
 
 
 
+
+
+
+
+
+
+
+
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Search } from "lucide-react";
@@ -330,9 +329,10 @@ const Online = () => {
   const [error, setError] = useState(null);
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  
+
   const { addChat } = useChatStore();
-  const defaultImage = "https://i.pinimg.com/736x/e4/04/13/e40413c5fd5cf7dc4f41aa6d911ce764.jpg";
+  const defaultImage =
+    "https://i.pinimg.com/736x/e4/04/13/e40413c5fd5cf7dc4f41aa6d911ce764.jpg";
 
   // Fetch Friends List
   useEffect(() => {
@@ -365,6 +365,7 @@ const Online = () => {
               photo: friend.photo || defaultImage,
             }))
           );
+          console.log("Friends IDs:", response.data.friends.map(f => f._id));
         } else {
           throw new Error(response.data.message || "Failed to fetch friends");
         }
@@ -378,76 +379,38 @@ const Online = () => {
     fetchFriends();
   }, [user]);
 
-  // Handle Click on a Friend to Start Chat
-  // const handleFriendClick = async (friend) => {
-  //   try {
-  //     // Check if chat already exists
-  //     const existingChat = useChatStore.getState().chats.find(
-  //       (chat) => chat.id === friend._id
-  //     );
-      
-  //     if (existingChat) {
-  //       navigate(`/chat/${friend._id}`);
-  //       return;
-  //     }
-  
-  //     // Create chat directly in Zustand store
-  //     addChat({
-  //       id: friend._id,
-  //       _id: friend._id, // Include both for consistency
-  //       name: friend.name,
-  //       status: friend.status === "offline" ? "Offline" : "Online",
-  //       lastMessage: `Started chatting with ${friend.name}`,
-  //       time: new Date().toLocaleTimeString([], {
-  //         hour: "2-digit",
-  //         minute: "2-digit",
-  //       }),
-  //       unread: false,
-  //       image: friend.photo || defaultImage,
-  //       messages: [] // Initialize empty messages array
-  //     });
-  
-  //     // Navigate to the new chat
-  //     navigate(`/chat/${friend._id}`);
-      
-  //   } catch (error) {
-  //     console.error("Error creating chat:", error);
-  //     setError("Failed to create chat locally");
-  //   }
-  // };
-
-
-
   const handleFriendClick = async (friend) => {
     try {
       const token = localStorage.getItem("token");
-      
+      const allFriendIds = friends.map(f => f._id);
+      console.log("All friend IDs:", allFriendIds);
+
       // Check if chat exists locally first
-      const existingChat = useChatStore.getState().chats.find(
-        (chat) => chat.id === friend._id
-      );
-      
+      const existingChat = useChatStore
+        .getState()
+        .chats.find((chat) => chat.id === friend._id);
+
       if (existingChat) {
         navigate(`/chat/${friend._id}`);
         return;
       }
-  
+
       // Create chat in backend
       const response = await axios.post(
         "http://localhost:8000/api/chat/chatadd",
         {
           receiverId: friend._id,
-          message: `Started chatting with ${friend.name}`
+          message: `Started chatting with ${friend.name}`,
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
+
       if (response.data.success) {
         // Add to Zustand store
         addChat({
-          id: friend._id,
+          id: response.data.friend.id,
           _id: response.data.chat._id, // Use the ID from the database
           name: friend.name,
           status: friend.status === "offline" ? "Offline" : "Online",
@@ -458,15 +421,17 @@ const Online = () => {
           }),
           unread: false,
           image: friend.photo || defaultImage,
-          messages: [{
-            _id: response.data.chat._id,
-            senderId: user._id,
-            receiverId: friend._id,
-            message: `Started chatting with ${friend.name}`,
-            timestamp: new Date().toISOString()
-          }]
+          messages: [
+            {
+              _id: response.data.chat._id,
+              senderId: user._id,
+              receiverId: friend._id,
+              message: `Started chatting with ${friend.name}`,
+              timestamp: new Date().toISOString(),
+            },
+          ],
         });
-  
+        console.log("All friend IDs:", allFriendIds);
         navigate(`/chat/${friend._id}`);
       } else {
         throw new Error(response.data.message || "Failed to create chat");
@@ -477,9 +442,6 @@ const Online = () => {
     }
   };
 
-  // UI Rendering
-  
-  // Online.js
 
   return (
     <div
@@ -501,7 +463,10 @@ const Online = () => {
               className="w-full pl-8 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none"
               placeholder="Search"
             />
-            <Search size={16} className="absolute left-3 top-2.5 text-gray-500" />
+            <Search
+              size={16}
+              className="absolute left-3 top-2.5 text-gray-500"
+            />
           </div>
         </div>
 
@@ -509,14 +474,18 @@ const Online = () => {
         <div className="overflow-y-auto h-full pb-20">
           <div className="hide-scrollbar">
             <div className="px-4 py-2 bg-gray-50">
-              <h3 className="text-xs font-medium text-gray-500">ONLINE FRIENDS</h3>
+              <h3 className="text-xs font-medium text-gray-500">
+                ONLINE FRIENDS
+              </h3>
             </div>
 
             {/* Loading & Error States */}
             {loading && <p className="text-center py-4">Loading friends...</p>}
             {error && <p className="text-center py-4 text-red-500">{error}</p>}
             {!loading && !error && friends.length === 0 && (
-              <p className="text-center py-4 text-gray-500">No friends available.</p>
+              <p className="text-center py-4 text-gray-500">
+                No friends available.
+              </p>
             )}
 
             {/* Friends List Mapping */}
