@@ -12,7 +12,8 @@ const MainLayout = ({ isMobile }) => {
   };
 
   return (
-    <div className={`h-screen w-screen flex ${darkMode ? 'bg-gray-900 text-white' : 'bg-[#f9f7fd] text-gray-800'} overflow-hidden transition-colors duration-300`}>
+    <div className='w-full h-screen'>
+      <div className={`h-screen w-screen flex ${darkMode ? 'bg-gray-900 text-white' : 'bg-[#f9f7fd] text-gray-800'} overflow-hidden transition-colors duration-300`}>
       {isMobile && <MobileHeader onMenuClick={() => setShowSidebar(!showSidebar)} />}
       
       <div className="flex flex-1 overflow-hidden">
@@ -23,12 +24,18 @@ const MainLayout = ({ isMobile }) => {
           />
         )}
         
-        <div className="flex flex-1 gap-5 p-5 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 gap-4 md:gap-5 p-4 overflow-hidden w-full sm:w-[40vw] md:w-[25vw]">
           <Outlet />
         </div>
       </div>
+    </div>
     </div>
   );
 };
 
 export default MainLayout;
+
+
+
+
+

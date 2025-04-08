@@ -393,14 +393,14 @@ const ChatList = ({ isMobile, onSelectChat }) => {
 
   if (error) {
     return (
-      <div className={`${darkMode ? "bg-gray-800" : "bg-white"} w-[25vw] p-4`}>
+      <div className={`${darkMode ? "bg-gray-800" : "bg-white"}  w-full sm:w-[25vw]`}>
         <p className="text-red-500">Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className={`${darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"} w-[25vw] overflow-hidden`}>
+    <div className={`h-full overflow-y-auto ${darkMode ? "bg-gray-800 text-white" : "bg-white rounded-md text-gray-800"} w-full sm:w-[30vw] md:w-[25vw] ` }>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
